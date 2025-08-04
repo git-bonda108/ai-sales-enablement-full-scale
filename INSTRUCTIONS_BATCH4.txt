@@ -1,0 +1,28 @@
+📋 STEP-BY-STEP INSTRUCTIONS FOR BATCH 4
+
+1. WHAT THIS BATCH CREATES:
+   - Analytics MCP server with 5 AI-powered tools
+   - Sales forecasting algorithms
+   - Deal scoring system
+   - Conversion analytics
+   - Performance metrics
+
+2. COPY ALL FILES:
+   - analytics_server.py → servers/analytics_server.py
+   - analytics_models.py → data/analytics_models.py
+   - test_analytics_server.py → tests/test_analytics_server.py
+
+3. START ANALYTICS SERVER:
+   Terminal 1: Keep CRM server running
+   Terminal 2: uv run python -m servers.analytics_server
+
+4. TEST ANALYTICS SERVER:
+   Terminal 3: uv run python tests/test_analytics_server.py
+
+5. VERIFY SUCCESS:
+   - Server connects to CRM database
+   - All 5 analytics tools working
+   - AI scoring and forecasting functional
+
+6. NEXT:
+   Ready for Batch 5 (Client/API) once verified!

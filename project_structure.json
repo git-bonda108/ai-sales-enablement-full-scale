@@ -1,0 +1,18 @@
+{
+  "project_root": "ai-sales-mcp-demo/",
+  "directories": {
+    "servers/": "MCP server implementations",
+    "client/": "MCP client and UI",
+    "data/": "Local SQLite databases",
+    "tests/": "Test suite",
+    "docs/": "Documentation",
+    "scripts/": "Utility scripts"
+  },
+  "key_files": {
+    "servers/crm_server.py": "CRM MCP server",
+    "servers/analytics_server.py": "Analytics MCP server",
+    "client/mcp_client.py": "MCP client handler",
+    "client/demo_ui.py": "Streamlit demo UI",
+    "data/sales.db": "SQLite database (auto-created)"
+  }
+}

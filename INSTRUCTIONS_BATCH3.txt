@@ -1,0 +1,27 @@
+📋 STEP-BY-STEP INSTRUCTIONS FOR BATCH 3
+
+1. WHAT THIS BATCH CREATES:
+   - Full CRM MCP server with 6 production tools
+   - SQLite database with schema
+   - Database initialization script
+   - Sample sales data (accounts, deals, contacts)
+   - Test script for CRM server
+
+2. COPY ALL FILES:
+   - crm_server.py → servers/crm_server.py
+   - init_crm_db.py → data/init_crm_db.py
+   - test_crm_server.py → tests/test_crm_server.py
+
+3. INITIALIZE DATABASE:
+   uv run python data/init_crm_db.py
+
+4. START CRM SERVER:
+   Terminal 1: uv run python -m servers.crm_server
+
+5. TEST CRM SERVER:
+   Terminal 2: uv run python tests/test_crm_server.py
+
+6. VERIFY SUCCESS:
+   - Database created with sample data
+   - All 6 CRM tools working
+   - Ready for Analytics server (Batch 4)

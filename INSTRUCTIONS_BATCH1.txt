@@ -1,0 +1,24 @@
+📋 STEP-BY-STEP INSTRUCTIONS FOR BATCH 1
+
+1. INSTALL UV (Python Package Manager):
+   - On Mac/Linux: curl -LsSf https://astral.sh/uv/install.sh | sh
+   - On Windows: powershell -c "irm https://astral.sh/uv/install.sh | iex"
+   - Restart your terminal after installation
+
+2. CREATE YOUR PROJECT:
+   mkdir ai-sales-mcp-demo
+   cd ai-sales-mcp-demo
+
+3. CREATE THESE DIRECTORIES:
+   mkdir servers
+   mkdir client  
+   mkdir data
+   mkdir tests
+
+4. COPY ALL THE FILES BELOW into your ai-sales-mcp-demo directory
+
+5. RUN THE SETUP:
+   chmod +x setup_demo.sh  # Make script executable (Mac/Linux)
+   ./setup_demo.sh         # Run the setup
+
+6. THAT'S IT! Your foundation is ready.

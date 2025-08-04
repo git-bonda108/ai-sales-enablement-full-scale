@@ -1,0 +1,23 @@
+📋 STEP-BY-STEP INSTRUCTIONS FOR BATCH 2
+
+1. WHAT THIS BATCH CREATES:
+   - A basic MCP server with test tools
+   - A test script to verify MCP is working
+   - Documentation explaining MCP concepts
+
+2. COPY ALL FILES BELOW INTO YOUR PROJECT:
+   - basic_server.py → servers/basic_server.py
+   - test_basic_server.py → tests/test_basic_server.py
+   - MCP_CONCEPTS.md → docs/MCP_CONCEPTS.md
+
+3. TEST THE SERVER:
+   Terminal 1: uv run python -m servers.basic_server
+   Terminal 2: uv run python tests/test_basic_server.py
+
+4. VERIFY SUCCESS:
+   - Server should start without errors
+   - Test script should show "All tests passed!"
+   - You'll see how MCP tools work
+
+5. ONCE VERIFIED:
+   Ask for Batch 3 to build the full CRM server!

@@ -1,0 +1,9 @@
+# Core dependencies
+mcp==0.9.1
+pydantic==2.5.2
+# For API Gateway
+fastapi==0.104.1
+uvicorn==0.24.0
+# For Streamlit UI (Batch 6)
+streamlit==1.29.0
+plotly==5.18.0

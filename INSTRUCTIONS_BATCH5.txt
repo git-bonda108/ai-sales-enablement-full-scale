@@ -1,0 +1,31 @@
+📋 STEP-BY-STEP INSTRUCTIONS FOR BATCH 5
+
+1. WHAT THIS BATCH CREATES:
+   - MCP Client that connects to both servers
+   - FastAPI REST gateway
+   - Unified API endpoints
+   - Error handling and retry logic
+   - Ready for Streamlit UI
+
+2. COPY ALL FILES:
+   - mcp_client.py → client/mcp_client.py
+   - api_gateway.py → api/api_gateway.py
+   - test_integration.py → tests/test_integration.py
+
+3. KEEP SERVERS RUNNING:
+   Terminal 1: CRM server (keep running)
+   Terminal 2: Analytics server (keep running)
+
+4. START API GATEWAY:
+   Terminal 3: uv run python api/api_gateway.py
+
+5. TEST INTEGRATION:
+   Terminal 4: uv run python tests/test_integration.py
+
+6. VERIFY SUCCESS:
+   - API running on http://localhost:8000
+   - Can call both CRM and Analytics tools
+   - REST endpoints working
+
+7. NEXT:
+   Ready for Batch 6 (Streamlit UI)!

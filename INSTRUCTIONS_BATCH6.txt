@@ -1,0 +1,38 @@
+📋 STEP-BY-STEP INSTRUCTIONS FOR BATCH 6
+
+1. WHAT THIS BATCH CREATES:
+   - Professional Streamlit UI
+   - Real-time sales dashboard
+   - Account 360° view
+   - AI-powered insights
+   - Interactive deal management
+   - Beautiful charts with Plotly
+
+2. COPY ALL FILES:
+   - streamlit_app.py → streamlit_app.py (root)
+   - ui_components.py → ui/ui_components.py
+   - demo_config.py → config/demo_config.py
+
+3. KEEP EVERYTHING RUNNING:
+   Terminal 1: CRM server
+   Terminal 2: Analytics server  
+   Terminal 3: API Gateway
+
+4. INSTALL UI DEPENDENCIES:
+   uv pip install streamlit plotly pandas
+
+5. START STREAMLIT:
+   Terminal 4: uv run streamlit run streamlit_app.py
+
+6. ACCESS THE UI:
+   Open browser: http://localhost:8501
+
+7. DEMO FLOW:
+   - Dashboard overview
+   - Click on accounts
+   - View AI insights
+   - Create a deal
+   - Show forecasting
+
+CONGRATULATIONS! 🎉
+Your AI Sales Platform is complete!

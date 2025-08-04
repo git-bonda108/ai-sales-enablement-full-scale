@@ -1,0 +1,1058 @@
+Full document content:
+================================================================================
+import streamlit as st
+import pandas as pd
+import numpy as np
+import plotly.express as px
+import plotly.graph_objects as go
+from datetime import datetime, timedelta
+import time
+import json
+import requests
+import os
+import base64
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import Flow
+from googleapiclient.discovery import build
+import sqlite3
+
+# API Gateway URL - connects to our MCP servers
+API_BASE = os.getenv("API_GATEWAY_URL", "http://localhost:8000")
+
+# Page config
+st.set_page_config(
+    page_title="AI Sales Intelligence Platform",
+    page_icon="🚀",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
+
+# Custom CSS for professional theme
+st.markdown("""
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    
+    .stApp {
+        background: #ffffff;
+        font-family: 'Inter', sans-serif;
+    }
+    
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 0rem;
+        padding-left: 2rem;
+        padding-right: 2rem;
+        max-width: 100%;
+    }
+    
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    
+    .gradient-text {
+        background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-size: 3.5rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+    }
+    
+    .subtitle {
+        color: #6b7280;
+        font-size: 1.2rem;
+        font-weight: 400;
+        margin-bottom: 2rem;
+    }
+    
+    .metric-card {
+        background: #ffffff;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+    
+    .metric-card:hover {
+        background: #f8fafc;
+        border-color: #3b82f6;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px -3px rgba(59, 130, 246, 0.3);
+    }
+    
+    .metric-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #1e40af;
+        margin: 0.5rem 0;
+    }
+    
+    .metric-label {
+        font-size: 0.9rem;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-weight: 500;
+    }
+    
+    .metric-delta {
+        font-size: 0.9rem;
+        font-weight: 600;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        display: inline-block;
+        margin-top: 0.5rem;
+    }
+    
+    .metric-delta-positive {
+        background: rgba(52, 211, 153, 0.2);
+        color: #10b981;
+    }
+    
+    .metric-delta-negative {
+        background: rgba(248, 113, 113, 0.2);
+        color: #ef4444;
+    }
+    
+    .stButton > button {
+        background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+        color: white;
+        border: none;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+    }
+    
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        display: inline-block;
+    }
+    
+    .status-active {
+        background: rgba(52, 211, 153, 0.2);
+        color: #10b981;
+        border: 1px solid rgba(52, 211, 153, 0.3);
+    }
+    
+    .feature-card {
+        background: #ffffff;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 2rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        height: 100%;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    
+    .feature-card:hover {
+        background: #f8fafc;
+        border-color: #3b82f6;
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px -3px rgba(59, 130, 246, 0.3);
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Initialize session state
+if 'authenticated' not in st.session_state:
+    st.session_state.authenticated = False
+if 'transcript_processed' not in st.session_state:
+    st.session_state.transcript_processed = False
+if 'emails_loaded' not in st.session_state:
+    st.session_state.emails_loaded = False
+if 'voice_call_active' not in st.session_state:
+    st.session_state.voice_call_active = False
+if 'gmail_token' not in st.session_state:
+    st.session_state.gmail_token = None
+
+# API Helper Functions
+def api_call(endpoint, method="GET", data=None):
+    """Make API calls to our MCP Gateway"""
+    try:
+        url = f"{API_BASE}/{endpoint}"
+        if method == "GET":
+            response = requests.get(url)
+        elif method == "POST":
+            response = requests.post(url, json=data)
+        elif method == "PUT":
+            response = requests.put(url, json=data)
+        elif method == "DELETE":
+            response = requests.delete(url)
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            st.error(f"API Error: {response.status_code}")
+            return None
+    except Exception as e:
+        st.error(f"Connection Error: {str(e)}")
+        return None
+
+# Header Section
+col1, col2, col3 = st.columns([1, 3, 1])
+with col2:
+    st.markdown('<h1 class="gradient-text">AI Sales Intelligence Platform</h1>', unsafe_allow_html=True)
+    st.markdown('<p class="subtitle">Empowering sales teams with real-time AI insights and automation</p>', unsafe_allow_html=True)
+
+# Navigation tabs
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
+    "🏠 Dashboard",
+    "🏢 Accounts",
+    "💼 Deals",
+    "🤖 AI Assistant",
+    "📧 Gmail Integration",
+    "🎯 AI Feedback",
+    "📝 Process Transcript",
+    "🔗 CRM Integration",
+    "📞 Voice Gateway"
+])
+
+# Tab 1: Dashboard with Real Data from MCP
+with tab1:
+    st.markdown("### 📊 Key Performance Metrics")
+    
+    # Fetch real metrics from analytics server
+    metrics = api_call("analytics/metrics")
+    
+    if metrics:
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            revenue = metrics.get('total_revenue', 0)
+            revenue_delta = metrics.get('revenue_change', 0)
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-label">Total Revenue</div>
+                <div class="metric-value">${revenue/1000:.1f}K</div>
+                <div class="metric-delta {'metric-delta-positive' if revenue_delta > 0 else 'metric-delta-negative'}">
+                    {'↑' if revenue_delta > 0 else '↓'} {abs(revenue_delta):.1f}%
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            active_deals = metrics.get('active_deals', 0)
+            new_deals = metrics.get('new_deals', 0)
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-label">Active Deals</div>
+                <div class="metric-value">{active_deals}</div>
+                <div class="metric-delta metric-delta-positive">↑ {new_deals} new</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col3:
+            win_rate = metrics.get('win_rate', 0)
+            win_rate_delta = metrics.get('win_rate_change', 0)
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-label">Win Rate</div>
+                <div class="metric-value">{win_rate:.0f}%</div>
+                <div class="metric-delta {'metric-delta-positive' if win_rate_delta > 0 else 'metric-delta-negative'}">
+                    {'↑' if win_rate_delta > 0 else '↓'} {abs(win_rate_delta):.1f}%
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col4:
+            avg_deal = metrics.get('avg_deal_size', 0)
+            deal_delta = metrics.get('deal_size_change', 0)
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-label">Avg Deal Size</div>
+                <div class="metric-value">${avg_deal/1000:.1f}K</div>
+                <div class="metric-delta {'metric-delta-positive' if deal_delta > 0 else 'metric-delta-negative'}">
+                    {'↑' if deal_delta > 0 else '↓'} {abs(deal_delta):.1f}%
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    # Charts from real data
+    st.markdown("### 📈 Sales Performance")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Forecast chart from analytics server
+        forecast_data = api_call("analytics/forecast")
+        if forecast_data:
+            dates = pd.to_datetime(forecast_data['dates'])
+            actual = forecast_data.get('actual_revenue', [])
+            predicted = forecast_data.get('predicted_revenue', [])
+            
+            fig = go.Figure()
+            if actual:
+                fig.add_trace(go.Scatter(
+                    x=dates[:len(actual)],
+                    y=actual,
+                    mode='lines+markers',
+                    name='Actual Revenue',
+                    line=dict(color='#3b82f6', width=3)
+                ))
+            
+            if predicted:
+                fig.add_trace(go.Scatter(
+                    x=dates[len(actual):],
+                    y=predicted,
+                    mode='lines+markers',
+                    name='Forecasted Revenue',
+                    line=dict(color='#ef4444', width=3, dash='dash')
+                ))
+            
+            fig.update_layout(
+                title='Revenue Forecast',
+                xaxis_title='Date',
+                yaxis_title='Revenue ($)',
+                template="plotly_white",
+                height=400
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+    
+    with col2:
+        # Pipeline from real CRM data
+        pipeline_data = api_call("crm/pipeline")
+        if pipeline_data:
+            stages = list(pipeline_data.keys())
+            values = list(pipeline_data.values())
+            
+            fig = px.funnel(
+                y=stages,
+                x=values,
+                title="Deal Pipeline"
+            )
+            
+            fig.update_layout(height=400)
+            st.plotly_chart(fig, use_container_width=True)
+    
+    # Activity Feed from CRM
+    st.markdown("### 🔔 Recent Activity")
+    activities = api_call("crm/activities?limit=5")
+    
+    if activities:
+        for activity in activities:
+            st.markdown(f"""
+            <div style="padding: 1rem; margin-bottom: 0.5rem; background: #ffffff; border-radius: 10px; border: 1px solid #e5e7eb;">
+                <span style="color: #6b7280; font-size: 0.85rem;">{activity['created_at']}</span> •
+                <span style="color: #374151; font-weight: 600;">{activity['type']}</span>
+                <span style="color: #6b7280;"> - </span>
+                <span style="color: #1e40af; font-weight: 600;">{activity['description']}</span>
+            </div>
+            """, unsafe_allow_html=True)
+
+# Tab 2: Accounts from CRM
+with tab2:
+    st.markdown("### 🏢 Account Management")
+    
+    # Search and filters
+    col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
+    with col1:
+        search = st.text_input("🔍 Search accounts", placeholder="Search by name, industry...")
+    with col2:
+        industry = st.selectbox("Industry", ["All", "Technology", "Healthcare", "Finance", "Retail"])
+    with col3:
+        size = st.selectbox("Company Size", ["All", "Enterprise", "Mid-Market", "SMB"])
+    with col4:
+        if st.button("➕ New Account", use_container_width=True):
+            st.session_state.show_new_account = True
+    
+    # Create new account form
+    if 'show_new_account' in st.session_state and st.session_state.show_new_account:
+        with st.expander("Create New Account", expanded=True):
+            with st.form("new_account_form"):
+                col1, col2 = st.columns(2)
+                with col1:
+                    new_name = st.text_input("Company Name*")
+                    new_industry = st.selectbox("Industry*", ["Technology", "Healthcare", "Finance", "Retail"])
+                    new_website = st.text_input("Website")
+                with col2:
+                    new_revenue = st.number_input("Annual Revenue ($)", min_value=0)
+                    new_employees = st.number_input("Employees", min_value=1)
+                    new_phone = st.text_input("Phone")
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.form_submit_button("Create Account", type="primary"):
+                        account_data = {
+                            "name": new_name,
+                            "industry": new_industry,
+                            "website": new_website,
+                            "annual_revenue": new_revenue,
+                            "employees": new_employees,
+                            "phone": new_phone
+                        }
+                        result = api_call("crm/accounts", method="POST", data=account_data)
+                        if result:
+                            st.success(f"✅ Account '{new_name}' created successfully!")
+                            st.session_state.show_new_account = False
+                            st.experimental_rerun()
+                with col2:
+                    if st.form_submit_button("Cancel"):
+                        st.session_state.show_new_account = False
+                        st.experimental_rerun()
+    
+    # Fetch and display accounts
+    accounts = api_call("crm/accounts")
+    
+    if accounts:
+        # Filter accounts based on search
+        if search:
+            accounts = [a for a in accounts if search.lower() in a['name'].lower()]
+        if industry != "All":
+            accounts = [a for a in accounts if a.get('industry') == industry]
+        
+        for account in accounts:
+            col1, col2, col3, col4, col5 = st.columns([3, 1, 1, 1, 1])
+            
+            with col1:
+                health_score = account.get('health_score', 80)
+                health_icon = "🟢" if health_score > 70 else "🟡" if health_score > 40 else "🔴"
+                st.markdown(f"### {health_icon} {account['name']}")
+            with col2:
+                st.markdown(f"**Industry:** {account.get('industry', 'N/A')}")
+            with col3:
+                revenue = account.get('annual_revenue', 0)
+                st.markdown(f"**Revenue:** ${revenue/1000000:.1f}M")
+            with col4:
+                st.markdown(f'<span class="status-badge status-active">Active</span>', unsafe_allow_html=True)
+            with col5:
+                if st.button("View Details", key=f"view_{account['id']}"):
+                    st.session_state.selected_account = account['id']
+            
+            st.markdown("---")
+
+# Tab 3: Deals from CRM
+with tab3:
+    st.markdown("### 💼 Deal Pipeline")
+    
+    # Deal metrics
+    deal_metrics = api_call("analytics/deal_metrics")
+    
+    if deal_metrics:
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric("Total Pipeline", f"${deal_metrics['total_pipeline']/1000000:.1f}M", 
+                     f"+{deal_metrics['pipeline_change']:.0f}%")
+        with col2:
+            st.metric("Deals in Progress", deal_metrics['active_deals'], 
+                     f"+{deal_metrics['new_deals_week']}")
+        with col3:
+            st.metric("Avg Days to Close", deal_metrics['avg_close_days'], 
+                     f"{deal_metrics['close_days_change']:+.0f}")
+        with col4:
+            st.metric("Close Rate", f"{deal_metrics['close_rate']:.0f}%", 
+                     f"+{deal_metrics['close_rate_change']:.1f}%")
+    
+    # Deal actions
+    col1, col2 = st.columns([3, 1])
+    with col2:
+        if st.button("➕ New Deal", use_container_width=True):
+            st.session_state.show_new_deal = True
+    
+    # Create new deal form
+    if 'show_new_deal' in st.session_state and st.session_state.show_new_deal:
+        with st.expander("Create New Deal", expanded=True):
+            with st.form("new_deal_form"):
+                col1, col2 = st.columns(2)
+                with col1:
+                    # Get accounts for dropdown
+                    accounts = api_call("crm/accounts")
+                    account_options = {a['name']: a['id'] for a in accounts} if accounts else {}
+                    
+                    deal_name = st.text_input("Deal Name*")
+                    account_name = st.selectbox("Account*", list(account_options.keys()))
+                    deal_stage = st.selectbox("Stage*", ["Prospecting", "Qualification", "Proposal", "Negotiation", "Closed Won", "Closed Lost"])
+                with col2:
+                    deal_amount = st.number_input("Amount ($)*", min_value=0)
+                    close_date = st.date_input("Expected Close Date*")
+                    probability = st.slider("Probability (%)", 0, 100, 50)
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.form_submit_button("Create Deal", type="primary"):
+                        deal_data = {
+                            "name": deal_name,
+                            "account_id": account_options.get(account_name),
+                            "stage": deal_stage,
+                            "amount": deal_amount,
+                            "close_date": close_date.isoformat(),
+                            "probability": probability
+                        }
+                        result = api_call("crm/deals", method="POST", data=deal_data)
+                        if result:
+                            st.success(f"✅ Deal '{deal_name}' created successfully!")
+                            st.session_state.show_new_deal = False
+                            st.experimental_rerun()
+                with col2:
+                    if st.form_submit_button("Cancel"):
+                        st.session_state.show_new_deal = False
+                        st.experimental_rerun()
+    
+    # Fetch and display deals
+    st.markdown("### 🔥 Active Deals")
+    
+    deals = api_call("crm/deals")
+    
+    if deals:
+        # Sort by probability
+        deals = sorted(deals, key=lambda x: x.get('probability', 0), reverse=True)
+        
+        for deal in deals[:10]:  # Show top 10
+            col1, col2, col3, col4, col5 = st.columns([3, 1, 1, 1, 1])
+            
+            with col1:
+                st.markdown(f"**{deal['name']}**")
+                account_name = api_call(f"crm/accounts/{deal['account_id']}")
+                if account_name:
+                    st.caption(account_name.get('name', ''))
+            with col2:
+                st.markdown(f"{deal['stage']}")
+            with col3:
+                st.markdown(f"${deal['amount']/1000:.0f}K")
+            with col4:
+                st.markdown(f"{deal['probability']}% likely")
+            with col5:
+                priority = "🔥 Hot" if deal['probability'] > 70 else "🟡 Warm" if deal['probability'] > 40 else "🔵 Cold"
+                st.markdown(priority)
+            
+            st.progress(deal['probability'] / 100)
+            st.markdown("---")
+
+# Tab 4: AI Assistant
+with tab4:
+    st.markdown("### 🤖 AI Sales Assistant")
+    
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        st.markdown("### 💬 Chat with AI Assistant")
+        
+        # Chat interface
+        messages_container = st.container()
+        
+        with messages_container:
+            st.info("👋 Hello! I'm your AI Sales Assistant. I can help you with:")
+            st.markdown("""
+            - 📊 Sales analytics and insights
+            - 🎯 Deal recommendations
+            - 📧 Email drafting
+            - 🔍 Account research
+            - 📅 Meeting scheduling
+            - 📈 Sales forecasting
+            """)
+            
+            # Get AI insights from analytics server
+            insights = api_call("analytics/ai_insights")
+            
+            if insights:
+                st.markdown("### 🎯 Today's AI Insights")
+                for insight in insights:
+                    st.success(f"💡 {insight['message']}")
+        
+        # User input
+        user_query = st.text_input("Ask me anything about your sales data...", 
+                                  placeholder="e.g., What deals need attention this week?")
+        
+        col1, col2 = st.columns([1, 4])
+        with col1:
+            if st.button("Send", use_container_width=True):
+                if user_query:
+                    with st.spinner("🤖 AI is thinking..."):
+                        # Call AI endpoint
+                        response = api_call("analytics/ai_query", method="POST", 
+                                          data={"query": user_query})
+                        
+                        if response:
+                            st.markdown("**AI Response:**")
+                            st.markdown(response.get('response', 'I understand your question. Let me analyze the data...'))
+                            
+                            # Show any relevant data
+                            if 'data' in response:
+                                st.json(response['data'])
+    
+    with col2:
+        st.markdown("### 📊 AI Performance")
+        
+        # AI metrics
+        ai_metrics = api_call("analytics/ai_metrics")
+        
+        if ai_metrics:
+            st.metric("Opportunities Identified", ai_metrics.get('opportunities', 0), 
+                     f"+{ai_metrics.get('new_opportunities', 0)}")
+            st.metric("Actions Recommended", ai_metrics.get('recommendations', 0))
+            st.metric("Time Saved This Week", f"{ai_metrics.get('time_saved', 0)} hrs")
+        
+        st.markdown("### 📋 Recent AI Actions")
+        
+        ai_actions = api_call("analytics/ai_actions?limit=5")
+        
+        if ai_actions:
+            for action in ai_actions:
+                st.markdown(f"✅ {action['description']}")
+
+# Tab 5: Gmail Integration
+with tab5:
+    st.markdown("### 📧 Gmail Integration")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("#### 🔐 Gmail Authentication")
+        
+        # Check if credentials file exists
+        if os.path.exists('credentials.json'):
+            if st.button("🔌 Connect Gmail", use_container_width=True):
+                # Initialize Gmail OAuth flow
+                result = api_call("integrations/gmail/auth", method="POST")
+                if result and 'auth_url' in result:
+                    st.markdown(f"[Click here to authorize Gmail access]({result['auth_url']})")
+                    
+                    # Show input for auth code
+                    auth_code = st.text_input("Enter authorization code:")
+                    if auth_code and st.button("Submit Code"):
+                        token_result = api_call("integrations/gmail/token", method="POST", 
+                                              data={"code": auth_code})
+                        if token_result:
+                            st.success("✅ Gmail connected successfully!")
+                            st.session_state.gmail_token = token_result.get('token')
+                            st.experimental_rerun()
+        else:
+            st.warning("⚠️ credentials.json not found. Please upload Gmail credentials.")
+    
+    with col2:
+        st.markdown("#### 📊 Connection Status")
+        
+        gmail_status = api_call("integrations/gmail/status")
+        if gmail_status and gmail_status.get('connected'):
+            st.success(f"🟢 Gmail Connected - {gmail_status.get('email')}")
+            st.info(f"📬 {gmail_status.get('unread_count', 0)} unread emails")
+        else:
+            st.warning("🔴 Gmail Not Connected")
+    
+    st.markdown("---")
+    
+    # Email management
+    if st.session_state.gmail_token or (gmail_status and gmail_status.get('connected')):
+        st.markdown("### 📬 Email Management")
+        
+        col1, col2, col3 = st.columns([1, 1, 3])
+        
+        with col1:
+            if st.button("🔄 Refresh Emails", use_container_width=True):
+                st.session_state.emails_refreshed = True
+        
+        with col2:
+            email_filter = st.selectbox("Filter", ["All", "Unread", "Important", "Sent"])
+        
+        # Fetch emails
+        emails = api_call(f"integrations/gmail/emails?filter={email_filter}")
+        
+        if emails:
+            st.markdown(f"### 📧 Emails ({len(emails)})")
+            
+            for idx, email in enumerate(emails[:10]):  # Show first 10
+                priority_icon = "🔴" if email.get('important') else "🔵"
+                
+                with st.expander(f"{priority_icon} {email['subject']} - {email['from']}", 
+                               expanded=(idx == 0 and email.get('unread', False))):
+                    
+                    col1, col2 = st.columns([3, 1])
+                    
+                    with col1:
+                        st.markdown(f"**From:** {email['from']}")
+                        st.markdown(f"**Date:** {email['date']}")
+                        st.markdown(f"**Preview:** {email['snippet']}")
+                    
+                    with col2:
+                        if email.get('unread'):
+                            st.info("🔵 Unread")
+                        if email.get('has_attachment'):
+                            st.info("📎 Attachment")
+                    
+                    st.markdown("---")
+                    
+                    # AI Response generation
+                    if st.button(f"🤖 Generate AI Response", key=f"gen_{email['id']}"):
+                        with st.spinner("AI is crafting response..."):
+                            ai_response = api_call("integrations/gmail/generate_response", 
+                                                 method="POST", 
+                                                 data={"email_id": email['id']})
+                            
+                            if ai_response:
+                                st.markdown("#### 📝 AI Generated Response:")
+                                response_text = st.text_area("Edit response:", 
+                                                           value=ai_response['response'], 
+                                                           height=200, 
+                                                           key=f"resp_{email['id']}")
+                                
+                                col1, col2, col3 = st.columns(3)
+                                with col1:
+                                    if st.button("✅ Send", key=f"send_{email['id']}"):
+                                        send_result = api_call("integrations/gmail/send", 
+                                                             method="POST",
+                                                             data={
+                                                                 "to": email['from'],
+                                                                 "subject": f"Re: {email['subject']}",
+                                                                 "body": response_text,
+                                                                 "thread_id": email.get('thread_id')
+                                                             })
+                                        if send_result:
+                                            st.success("✅ Email sent successfully!")
+                                
+                                with col2:
+                                    if st.button("💾 Save Draft", key=f"draft_{email['id']}"):
+                                        st.info("Draft saved")
+        else:
+            st.info("No emails to display. Click 'Refresh Emails' to load.")
+
+# CONTINUE WITH TAB 6-9 IN PART 2
+
+# Tab 6: AI Feedback & Training
+with tab6:
+    st.markdown("### 🎯 AI Feedback & Training")
+    
+    # Performance Metrics
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        model_metrics = api_call("analytics/model_metrics")
+        if model_metrics:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-label">Model Accuracy</div>
+                <div class="metric-value">{model_metrics['accuracy']:.1f}%</div>
+                <div class="metric-delta metric-delta-positive">↑ {model_metrics['accuracy_change']:.1f}%</div>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-label">Processed Transcripts</div>
+            <div class="metric-value">{model_metrics.get('transcripts_processed', 0)}</div>
+            <div class="metric-delta metric-delta-positive">+{model_metrics.get('transcripts_today', 0)} today</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-label">Feedback Items</div>
+            <div class="metric-value">{model_metrics.get('feedback_items', 0)}</div>
+            <div class="metric-delta metric-delta-positive">+{model_metrics.get('pending_feedback', 0)} pending</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Recent Extractions for Review
+    st.markdown("### 📝 Recent Extractions for Review")
+    
+    extractions = api_call("analytics/recent_extractions?limit=5")
+    
+    if extractions:
+        for idx, extraction in enumerate(extractions):
+            with st.expander(f"✅ Review: {extraction['entity']} - {extraction['type']}"):
+                col1, col2 = st.columns([3, 1])
+                
+                with col1:
+                    st.write(f"**Extracted Entity:** {extraction['entity']}")
+                    st.write(f"**Type:** {extraction['type']}")
+                    st.write(f"**Confidence:** {extraction['confidence']:.0f}%")
+                    st.write(f"**Context:** '{extraction['context']}'")
+                    st.write(f"**Source:** {extraction.get('source', 'Transcript')}")
+                
+                with col2:
+                    st.markdown("**Feedback:**")
+                    col_a, col_b = st.columns(2)
+                    with col_a:
+                        if st.button("✅ Correct", key=f"correct_{idx}", use_container_width=True):
+                            feedback_result = api_call("analytics/feedback", method="POST",
+                                                     data={
+                                                         "extraction_id": extraction['id'],
+                                                         "feedback": "correct"
+                                                     })
+                            if feedback_result:
+                                st.success("Feedback recorded!")
+                    with col_b:
+                        if st.button("❌ Incorrect", key=f"incorrect_{idx}", use_container_width=True):
+                            feedback_result = api_call("analytics/feedback", method="POST",
+                                                     data={
+                                                         "extraction_id": extraction['id'],
+                                                         "feedback": "incorrect"
+                                                     })
+                            if feedback_result:
+                                st.error("Marked for review")
+    
+    # Retrain Model Section
+    st.markdown("### 🔄 Model Retraining")
+    
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        if st.button("🚀 Retrain Model", type="primary", use_container_width=True):
+            with st.spinner("Retraining model with feedback..."):
+                # Call retrain endpoint
+                retrain_result = api_call("analytics/retrain", method="POST")
+                
+                if retrain_result:
+                    # Show progress
+                    progress_bar = st.progress(0)
+                    for i in range(100):
+                        time.sleep(0.02)
+                        progress_bar.progress(i + 1)
+                    
+                    st.success(f"✅ Model retrained successfully! New accuracy: {retrain_result['new_accuracy']:.1f}%")
+    
+    with col2:
+        feedback_ready = api_call("analytics/feedback_count")
+        if feedback_ready:
+            st.info(f"{feedback_ready['count']} feedback items ready for training")
+    
+    # Training History Chart
+    st.markdown("### 📊 Model Performance History")
+    
+    training_history = api_call("analytics/training_history")
+    
+    if training_history:
+        dates = pd.to_datetime(training_history['dates'])
+        accuracy_values = training_history['accuracy']
+        
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=dates,
+            y=accuracy_values,
+            mode='lines+markers',
+            name='Accuracy',
+            line=dict(color='#3b82f6', width=3),
+            marker=dict(size=8)
+        ))
+        
+        fig.update_layout(
+            title='Model Accuracy Over Time',
+            xaxis_title='Date',
+            yaxis_title='Accuracy (%)',
+            template="plotly_white",
+            height=400
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
+
+# Tab 7: Process Transcript
+with tab7:
+    st.markdown("### 📝 Process Call Transcript")
+    
+    # Upload section
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        upload_option = st.radio("Choose input method:", ["Paste Transcript", "Upload Audio File", "Load Sample"])
+        
+        if upload_option == "Paste Transcript":
+            transcript_text = st.text_area(
+                "Paste transcript text:",
+                height=300,
+                placeholder="Paste your sales call transcript here..."
+            )
+        
+        elif upload_option == "Upload Audio File":
+            uploaded_file = st.file_uploader("Upload audio file", type=['mp3', 'wav', 'm4a'])
+            if uploaded_file:
+                st.success(f"✅ Uploaded: {uploaded_file.name}")
+                # Save file temporarily
+                with open(f"temp_{uploaded_file.name}", "wb") as f:
+                    f.write(uploaded_file.getbuffer())
+        
+        else:  # Load Sample
+            # Get sample transcript
+            sample = api_call("analytics/sample_transcript")
+            if sample:
+                transcript_text = st.text_area(
+                    "Sample transcript:",
+                    height=300,
+                    value=sample.get('text', '')
+                )
+    
+    with col2:
+        st.markdown("#### 🎯 Quick Actions")
+        
+        # Process button
+        if st.button("🤖 Process Transcript", use_container_width=True, type="primary"):
+            
+            # Determine what to process
+            if upload_option == "Upload Audio File" and uploaded_file:
+                # Process audio file
+                process_data = {
+                    "type": "audio",
+                    "filename": uploaded_file.name
+                }
+            else:
+                # Process text
+                process_data = {
+                    "type": "text",
+                    "transcript": transcript_text if 'transcript_text' in locals() else ""
+                }
+            
+            if process_data.get('transcript') or process_data.get('filename'):
+                with st.spinner("🤖 AI is processing transcript..."):
+                    # Process transcript
+                    result = api_call("analytics/process_transcript", method="POST", data=process_data)
+                    
+                    if result:
+                        st.session_state.transcript_processed = True
+                        st.session_state.transcript_result = result
+                        st.success("✅ Processing complete!")
+                        st.balloons()
+            else:
+                st.error("Please provide a transcript or upload an audio file")
+        
+        # Sample data button
+        if st.button("📄 Use Sample Data", use_container_width=True):
+            st.info("Sample transcript loaded above")
+    
+    # Show results if processed
+    if st.session_state.transcript_processed and 'transcript_result' in st.session_state:
+        result = st.session_state.transcript_result
+        
+        st.markdown("---")
+        st.markdown("### 📊 Extraction Results")
+        
+        # Metrics
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Entities Found", result.get('entity_count', 0))
+        with col2:
+            st.metric("Confidence Score", f"{result.get('confidence', 0):.0f}%")
+        with col3:
+            st.metric("Processing Time", f"{result.get('processing_time', 0):.1f}s")
+        
+        # Extracted Information
+        st.markdown("### 🔍 Extracted Information")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if 'account' in result:
+                st.markdown("#### 🏢 Account Information")
+                account = result['account']
+                st.markdown(f"""
+                **Company:** {account.get('name', 'N/A')}
+                **Industry:** {account.get('industry', 'N/A')}
+                **Size:** {account.get('size', 'N/A')}
+                **Current Tools:** {', '.join(account.get('tools', []))}
+                """)
+            
+            if 'contacts' in result:
+                st.markdown("#### 👤 Contact Information")
+                for contact in result['contacts']:
+                    st.markdown(f"""
+                    **Name:** {contact.get('name', 'N/A')}
+                    **Title:** {contact.get('title', 'N/A')}
+                    **Email:** {contact.get('email', 'N/A')}
+                    **Decision Maker:** {'Yes' if contact.get('decision_maker') else 'No'}
+                    """)
+        
+        with col2:
+            if 'deal' in result:
+                st.markdown("#### 💰 Deal Information")
+                deal = result['deal']
+                st.markdown(f"""
+                **Deal Size:** ${deal.get('amount', 0):,.0f}
+                **Stage:** {deal.get('stage', 'N/A')}
+                **Type:** {deal.get('type', 'N/A')}
+                **Probability:** {deal.get('probability', 0)}%
+                """)
+            
+            if 'next_steps' in result:
+                st.markdown("#### 📅 Next Steps")
+                for step in result['next_steps']:
+                    st.markdown(f"- {step}")
+        
+        # Actions Taken
+        st.markdown("### ✅ Actions Taken")
+        
+        if 'actions' in result:
+            for action in result['actions']:
+                st.markdown(f"✅ {action}")
+        
+        # View in CRM button
+        st.markdown("---")
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            if st.button("🔗 View Created Records in CRM", type="primary", use_container_width=True):
+                st.session_state.active_tab = 8  # Switch to CRM tab
+                st.experimental_rerun()
+
+# Tab 8: CRM Integration
+with tab8:
+    st.markdown("### 🔗 CRM Integration Hub")
+    
+    # CRM Status
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("#### 🏢 Connected CRMs")
+        
+        # Show CRM connections
+        crm_status = api_call("crm/status")
+        
+        if crm_status:
+            st.success(f"✅ {crm_status['type']} CRM Connected")
+            st.info(f"Database: {crm_status['database']}")
+            st.metric("Total Records", crm_status.get('total_records', 0))
+        
+        # External CRM options
+        st.markdown("#### 🔌 External CRM Connectors")
+        
+        crm_type = st.selectbox("Add CRM Integration", 
+                               ["Select...", "Salesforce", "HubSpot", "Pipedrive", "Microsoft Dynamics"])
+        
+        if crm_type != "Select...":
+            with st.expander(f"Configure {crm_type}", expanded=True):
+                if crm_type == "Salesforce":
+                    sf_instance = st.text_input("Instance URL", placeholder="https://yourcompany.salesforce.com")
+                    sf_token = st.text_input("Access Token", type="password")
+                    if st.button("Connect Salesforce"):
+                        # Call integration endpoint
+                        result = api_call("integrations/salesforce/connect", method="POST",
+                                        data={"instance_url": sf_instance, "token": sf_token})
+                        if result:
+                            st.success("✅ Salesforce connected!")
+                
+                elif crm_type == "HubSpot":
+                    hs_key = st.text_input("API Key", type="password")
+                    if st.button("Connect HubSpot"):
+                        result = api_call("integrations/hubspot/connect", method="POST",
+                                        data={"api_key": hs_key})
+                        if result:
+                            st.success("✅ HubSpot connected!")
+    
+    with col2:
+        st.markdown("#### 📊 Sync Status")
+        
+        sync_status = api_call("crm/sync_status")
+        
+        if sync_status:
+            st.success(f"🟢 Last Sync: {sync_status['last_sync']}")
+            st.info(f"Records Synced: {sync_status['records_synced']}")
+            
+            if st.button("🔄 Sync Now", use_container_width=True):
+                with st.spinner("Syncing..."):[object Object]
+
+
+
+================================================================================

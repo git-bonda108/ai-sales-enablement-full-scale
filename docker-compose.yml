@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # AI Model Server
+  model-server:
+    build: ./model-server
+    ports:
+      - "8001:8001"
+    environment:
+      - MODEL_NAME=microsoft/phi-2
+      - MAX_TOKENS=2048
+    volumes:
+      - ./models:/app/models
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+
+  # Main API
+  api:
+    build: ./api
+    ports:
+      - "8000:8000"
+    environment:
+      - MODEL_SERVER_URL=http://model-server:8001
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql://user:pass@postgres:5432/salesai
+    depends_on:
+      - model-server
+      - redis
+      - postgres
+    volumes:
+      - ./data:/app/data
+
+  # Vector Database
+  qdrant:
+    image: qdrant/qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - ./qdrant_data:/qdrant/storage
+
+  # Cache
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+  # Database
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: salesai
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Frontend
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+  qdrant_data:
