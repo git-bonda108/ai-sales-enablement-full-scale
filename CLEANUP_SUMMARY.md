@@ -183,7 +183,7 @@
 ## 📁 **Clean Directory Structure**
 
 ```
-ai-sales-mcp-demo/
+mcp-sales-enablement/
 ├── beautiful_streamlit_app.py     # ✅ Primary UI (8502)
 ├── api_gateway_quick_fix.py      # ✅ Primary API (8000)
 ├── servers/

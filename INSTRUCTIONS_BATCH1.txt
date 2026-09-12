@@ -6,8 +6,8 @@
    - Restart your terminal after installation
 
 2. CREATE YOUR PROJECT:
-   mkdir ai-sales-mcp-demo
-   cd ai-sales-mcp-demo
+   mkdir mcp-sales-enablement
+   cd mcp-sales-enablement
 
 3. CREATE THESE DIRECTORIES:
    mkdir servers
@@ -15,7 +15,7 @@
    mkdir data
    mkdir tests
 
-4. COPY ALL THE FILES BELOW into your ai-sales-mcp-demo directory
+4. COPY ALL THE FILES BELOW into your mcp-sales-enablement directory
 
 5. RUN THE SETUP:
    chmod +x setup_demo.sh  # Make script executable (Mac/Linux)

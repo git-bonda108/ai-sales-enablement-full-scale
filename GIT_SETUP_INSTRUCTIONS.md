@@ -12,7 +12,7 @@
 ### **1. Create GitHub Repository**
 
 1. Go to https://github.com/new
-2. Repository name: `ai-sales-mcp-demo`
+2. Repository name: `mcp-sales-enablement`
 3. Description: `AI Sales Enablement Platform with RAG and Training Pipeline`
 4. Make it **Public** (for easier access)
 5. **Don't** initialize with README (we already have one)
@@ -34,7 +34,7 @@ git push -u origin main
 gh auth login
 
 # Create repository
-gh repo create ai-sales-sandbox/ai-sales-mcp-demo --public --description "AI Sales Enablement Platform with RAG and Training Pipeline"
+gh repo create ai-sales-sandbox/mcp-sales-enablement --public --description "AI Sales Enablement Platform with RAG and Training Pipeline"
 
 # Push code
 git push -u origin main
@@ -43,7 +43,7 @@ git push -u origin main
 ## 📁 **Repository Structure**
 
 ```
-ai-sales-mcp-demo/
+mcp-sales-enablement/
 ├── beautiful_streamlit_app.py     # ✅ Main UI (Port 8502)
 ├── api_gateway_quick_fix.py      # ✅ Main API (Port 8000)
 ├── servers/
@@ -89,8 +89,8 @@ ai-sales-mcp-demo/
 
 ### **1. Clone Repository**
 ```bash
-git clone https://github.com/git-bonda108/ai-sales-mcp-demo.git
-cd ai-sales-mcp-demo
+git clone https://github.com/git-bonda108/mcp-sales-enablement.git
+cd mcp-sales-enablement
 ```
 
 ### **2. Install Dependencies**

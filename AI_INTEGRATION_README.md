@@ -176,7 +176,6 @@ asyncio.run(test_transcript())
 OPENAI_API_KEY=sk-your-openai-key-here
 
 # Optional
-ANTHROPIC_API_KEY=sk-your-anthropic-key-here
 APP_ENV=development
 LOG_LEVEL=INFO
 ```

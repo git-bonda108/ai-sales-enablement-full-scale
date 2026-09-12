@@ -1,4 +1,4 @@
-# AI Sales MCP Demo
+# MCP Sales Enablement
 
 A demonstration platform that exposes CRM, analytics, RAG, and training-pipeline capabilities as Model Context Protocol (MCP) servers behind a FastAPI gateway, with a Streamlit front end for sales teams.
 
@@ -35,8 +35,8 @@ Two gateway variants are committed:
 Requires Python ≥ 3.10 and [uv](https://docs.astral.sh/uv/).
 
 ```bash
-git clone https://github.com/git-bonda108/ai-sales-mcp-demo.git
-cd ai-sales-mcp-demo
+git clone https://github.com/git-bonda108/mcp-sales-enablement.git
+cd mcp-sales-enablement
 uv sync
 
 # Terminal 1 — backend (mock-data demo gateway)

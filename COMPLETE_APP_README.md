@@ -134,7 +134,7 @@ uv run streamlit run streamlit_app_complete.py
 ## 🔍 File Structure
 
 ```
-ai-sales-mcp-demo/
+mcp-sales-enablement/
 ├── streamlit_app_complete.py     # 🎯 MAIN APP (1001 lines)
 ├── streamlit_app_part1.py        # Part 1 (Tabs 1-3)
 ├── streamlit_app_part2.py        # Part 2 (Tabs 4-6)
