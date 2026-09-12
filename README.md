@@ -1,213 +1,90 @@
-# 🚀 AI Sales Enablement Platform
+# AI Sales MCP Demo
 
-## 📋 **Current Status: PRODUCTION READY**
+A demonstration platform that exposes CRM, analytics, RAG, and training-pipeline capabilities as Model Context Protocol (MCP) servers behind a FastAPI gateway, with a Streamlit front end for sales teams.
 
-**Primary App**: http://localhost:8502  
-**API Gateway**: http://localhost:8000  
-**Status**: ✅ **FULLY FUNCTIONAL**
+It shows how a sales-assistant product can be decomposed into independent MCP tool servers — account/deal management, forecasting and deal scoring, vector retrieval over call transcripts, and a feedback-driven entity-extraction pipeline — orchestrated over stdio by a single HTTP gateway. It is a demo: several surfaces intentionally serve mock data so the UI can be exercised end to end without external services.
 
----
+## Architecture at a glance
 
-## 🏗️ **Architecture Overview**
+- **Orchestration pattern:** gateway-mediated tool federation. A FastAPI HTTP gateway is the single entry point; it spawns MCP servers as stdio subprocesses and forwards requests as MCP tool calls. Composite reads in `client/mcp_client.py` (e.g. `get_account_360`, `get_pipeline_dashboard`) chain CRM and Analytics tool calls **sequentially** — there is no parallel fan-out and no autonomous agent loop; every LLM interaction is a single request/response.
+- **Models:** OpenAI `gpt-3.5-turbo` via `ai_integration.py` for chat, transcript analysis, and email drafting, with a deterministic keyword-based fallback when no API key is configured or a call fails. Embeddings use SentenceTransformers `all-MiniLM-L6-v2`.
+- **Memory / state:** SQLite databases (`data/sales_crm.db` shared by the CRM and Analytics servers; `training_data.db` for the training pipeline). No conversational session store — chat requests are stateless.
+- **Retrieval:** ChromaDB (persistent, `./chroma_db`) with three collections — `transcripts`, `deals`, `knowledge` — queried by embedding similarity in `rag_server.py`. Retrieval confidence feeds a progressive-autonomy gate (auto-execute ≥ 0.90, suggest-with-review ≥ 0.70, human-required below).
 
-```
-┌─────────────────┐
-│   Streamlit UI  │ ← Port 8502
-│  (beautiful_*)  │
-└────────┬────────┘
-         │ HTTP
-    ┌────┴────┐
-    │ API     │ ← Port 8000
-    │ Gateway │
-    └──┬──────┘
-       │ MCP Protocol
-   ┌───┴───┐
-   │ CRM   │ Analytics │ Training │ RAG
-   │Server │ Server    │ Server   │ Server
-   └───────┴──────────┴──────────┴──────┘
+```mermaid
+flowchart LR
+    UI[Streamlit UI\nbeautiful_streamlit_app.py] -->|HTTP :8000| GW[FastAPI gateway]
+    GW -->|MCP stdio| CRM[CRM server\n6 tools / SQLite]
+    GW -->|MCP stdio| AN[Analytics server\n5 tools / SQLite]
+    TR[Training server\n4 tools / SQLite] -.MCP stdio.- GW
+    RAG[RAG server\n5 tools / ChromaDB] -.MCP stdio.- GW
+    GW --> AI[ai_integration.py\ngpt-3.5-turbo + fallback]
 ```
 
-## 🎯 **Key Features**
+Solid lines are the wiring in `api/api_gateway.py`; dashed servers are implemented but not spawned by either committed gateway (see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)).
 
-### ✅ **Core Functionality**
-- **CRM Operations**: Full CRUD for accounts and deals
-- **Gmail Integration**: Email reading, drafting, and automation
-- **AI Chat**: OpenAI-compatible chat completions
-- **Analytics**: Real-time dashboards and insights
-- **RAG System**: Vector search with ChromaDB
-- **Training Pipeline**: Entity extraction and feedback collection
+Two gateway variants are committed:
 
-### ✅ **RAG Implementation**
-- **Vector Database**: ChromaDB with 3 collections
-- **Embedding Model**: `all-MiniLM-L6-v2`
-- **Features**: Transcript storage, similarity search, progressive autonomy
+| File | Role |
+|---|---|
+| `api/api_gateway.py` | Real MCP wiring: connects to the CRM and Analytics servers over stdio at startup |
+| `api_gateway_quick_fix.py` | Self-contained demo gateway serving mock data for every endpoint (what the quickstart runs) |
 
-### ✅ **Training Pipeline**
-- **Entity Extraction**: Rule-based patterns
-- **Feedback System**: Continuous learning
-- **CRM Suggestions**: Automated actions
-- **Model Retraining**: Interface for improvements
+## Quickstart
 
-## 🚀 **Quick Start**
+Requires Python ≥ 3.10 and [uv](https://docs.astral.sh/uv/).
 
-### **1. Start the Backend**
 ```bash
+git clone https://github.com/git-bonda108/ai-sales-mcp-demo.git
+cd ai-sales-mcp-demo
+uv sync
+
+# Terminal 1 — backend (mock-data demo gateway)
 uv run python api_gateway_quick_fix.py
-```
+# expected: "🚀 Starting Quick Fix API Gateway on http://localhost:8000"
 
-### **2. Start the Frontend**
-```bash
+# Terminal 2 — frontend
 uv run streamlit run beautiful_streamlit_app.py --server.port 8502
+# expected: "You can now view your Streamlit app in your browser. Local URL: http://localhost:8502"
 ```
 
-### **3. Access the Application**
-- **UI**: http://localhost:8502
-- **API**: http://localhost:8000
-- **Health Check**: http://localhost:8000/health
+Verify:
 
-## 📁 **Current Working Files**
-
-### **Primary Applications**
-- `beautiful_streamlit_app.py` - Main UI (Port 8502)
-- `api_gateway_quick_fix.py` - Main API (Port 8000)
-
-### **MCP Servers**
-- `servers/crm_server.py` - CRM operations
-- `servers/analytics_server.py` - Analytics and insights
-- `training_server.py` - Training pipeline
-- `rag_server.py` - RAG system
-
-### **Configuration**
-- `requirements.txt` - Dependencies
-- `pyproject.toml` - Project configuration
-- `config/` - Configuration files
-
-## 🔧 **Technical Stack**
-
-### **Frontend**
-- **Streamlit**: Modern web interface
-- **Plotly**: Interactive charts and dashboards
-- **Custom CSS**: Professional white theme
-
-### **Backend**
-- **FastAPI**: High-performance API
-- **MCP Protocol**: Model Context Protocol
-- **SQLite**: Local data storage
-
-### **AI/ML**
-- **ChromaDB**: Vector database
-- **SentenceTransformer**: Embedding model
-- **Rule-based**: Entity extraction patterns
-
-### **Integrations**
-- **Gmail API**: Email automation
-- **OpenAI-compatible**: Chat completions
-- **CRM**: Account and deal management
-
-## 📊 **API Endpoints**
-
-### **Core Endpoints**
-- `GET /health` - Health check
-- `GET /api/metrics` - Dashboard metrics
-- `GET /crm/accounts` - List accounts
-- `POST /crm/accounts` - Create account
-- `GET /crm/deals` - List deals
-- `POST /crm/deals` - Create deal
-
-### **AI Endpoints**
-- `POST /v1/chat/completions` - AI chat
-- `POST /ai/process-transcript` - Transcript processing
-
-### **Gmail Endpoints**
-- `GET /integrations/gmail/unread` - Unread emails
-- `POST /integrations/gmail/generate-response/{email_id}` - Generate response
-- `POST /integrations/gmail/send` - Send email
-
-## 🧪 **Testing**
-
-### **Health Check**
 ```bash
 curl http://localhost:8000/health
-```
-
-### **API Testing**
-```bash
+# {"status":"healthy","timestamp":"..."}
 curl http://localhost:8000/api/metrics
 curl http://localhost:8000/crm/accounts
 ```
 
-## 📈 **Performance Metrics**
+Individual MCP servers can be run and smoke-tested directly:
 
-- **Response Time**: < 200ms average
-- **Uptime**: 99.9% availability
-- **Memory Usage**: < 500MB
-- **CPU Usage**: < 10% average
-
-## 🔒 **Security**
-
-- **Local Deployment**: No external dependencies
-- **Data Privacy**: All data stays on-premise
-- **MCP Protocol**: Secure AI communication
-- **HTTPS Ready**: SSL configuration available
-
-## 📚 **Documentation**
-
-- `CLEANUP_SUMMARY.md` - Recent cleanup details
-- `TEST_EXECUTION_REPORT.md` - Comprehensive testing
-- `BATCH11_IMPLEMENTATION_SUMMARY.md` - RAG implementation
-- `BATCH10_IMPLEMENTATION_SUMMARY.md` - Training pipeline
-
-## 🎯 **Demo Scenarios**
-
-### **1. Email Processing**
-- AI reads and analyzes emails
-- Generates contextual responses
-- Human-in-the-loop approval
-
-### **2. Call Analysis**
-- 30-minute sales call processing
-- Entity extraction (Company, Contact, Budget)
-- Automatic CRM record creation
-
-### **3. Deal Intelligence**
-- AI-powered deal analysis
-- Win probability calculation
-- Competitive intelligence
-
-### **4. Sales Automation**
-- Automated stage progression
-- Sales forecast updates
-- Performance tracking
-
-## 🚀 **Deployment**
-
-### **Local Development**
 ```bash
-# Install dependencies
-uv sync
-
-# Start backend
-uv run python api_gateway_quick_fix.py
-
-# Start frontend
-uv run streamlit run beautiful_streamlit_app.py --server.port 8502
+uv run python -m servers.crm_server        # prints its 6 tools, then waits for an MCP client
+uv run python tests/working_crm_test.py    # spawns the server and exercises the tool logic
 ```
 
-### **Production**
-- Docker configuration available
-- Environment variables for configuration
-- SSL/TLS support
-- Load balancing ready
+## Configuration
 
----
+| Variable / file | What it is | Where to get it |
+|---|---|---|
+| `OPENAI_API_KEY` | Enables real LLM responses in `ai_integration.py` (loaded via `.env` / environment). Without it the platform runs in deterministic fallback mode. | platform.openai.com |
+| `credentials.json` | Google OAuth client secrets for the Gmail integration (`gmail_client.py`, `gmail_integration.py`). Git-ignored; place in the repo root. | Google Cloud Console → APIs & Services → Credentials (OAuth client, Desktop app) |
+| `token.pickle` / `token.json` | Cached Gmail OAuth token, created on first authentication. Git-ignored. | Generated automatically |
+| `docker-compose.yml` env (`DATABASE_URL`, `REDIS_URL`, `MODEL_SERVER_URL`, …) | Part of a containerized deployment sketch; the referenced build contexts are not in this repo. | See [docs/HARDENING.md](docs/HARDENING.md) |
 
-## 📞 **Support**
+## Documentation
 
-For questions or issues:
-1. Check the documentation files
-2. Review the test reports
-3. Verify the current working files
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — component map, data flow, orchestration analysis, design trade-offs
+- [docs/EVALUATION.md](docs/EVALUATION.md) — what is actually tested today, and a proposed evaluation harness
+- [docs/HARDENING.md](docs/HARDENING.md) — current security posture and a staged path to production
+- [docs/MCP_CONCEPTS.md](docs/MCP_CONCEPTS.md) — background notes on MCP concepts used here
 
-**Status**: ✅ **PRODUCTION READY**  
-**Last Updated**: 2025-08-04  
-**Version**: 1.0.0
+## Repository layout notes
+
+- `servers/`, `client/`, `config/`, `data/` hold the canonical packaged modules; byte-identical copies of several of them exist at the repository root (and in `src/`) so flat-import deployment targets such as Streamlit Cloud can run the app without package installation.
+- The numerous `BATCH*`, `*_SUMMARY.md`, and `*_REPORT.md` files are working notes retained from the iterative build; the four documents above supersede them as reference documentation.
+
+## Status
+
+Demonstration project. The UI, gateway, MCP servers, RAG store, and training pipeline are all implemented, but the quickstart path serves mock data by design, and the LLM layer degrades to canned responses without an API key. See [docs/EVALUATION.md](docs/EVALUATION.md) for an honest account of test coverage and known gaps.

@@ -89,7 +89,7 @@ ai-sales-mcp-demo/
 
 ### **1. Clone Repository**
 ```bash
-git clone https://github.com/ai-sales-sandbox/ai-sales-mcp-demo.git
+git clone https://github.com/git-bonda108/ai-sales-mcp-demo.git
 cd ai-sales-mcp-demo
 ```
 

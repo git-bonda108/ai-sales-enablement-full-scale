@@ -55,7 +55,7 @@ All tests now pass:
 
 ### Step 1: Start the Streamlit App
 ```bash
-cd /Users/macbook/Documents/ai-sales-mcp-demo
+cd ai-sales-mcp-demo
 uv run streamlit run streamlit_latest.py --server.port 8501
 ```
 
