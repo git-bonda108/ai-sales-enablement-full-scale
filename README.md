@@ -35,8 +35,8 @@ Two gateway variants are committed:
 Requires Python ≥ 3.10 and [uv](https://docs.astral.sh/uv/).
 
 ```bash
-git clone https://github.com/git-bonda108/mcp-sales-enablement.git
-cd mcp-sales-enablement
+git clone https://github.com/git-bonda108/ai-sales-enablement-full-scale.git
+cd ai-sales-enablement-full-scale
 uv sync
 
 # Terminal 1 — backend (mock-data demo gateway)

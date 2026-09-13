@@ -55,7 +55,7 @@ All tests now pass:
 
 ### Step 1: Start the Streamlit App
 ```bash
-cd mcp-sales-enablement
+cd ai-sales-enablement-full-scale
 uv run streamlit run streamlit_latest.py --server.port 8501
 ```
 

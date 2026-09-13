@@ -89,8 +89,8 @@ mcp-sales-enablement/
 
 ### **1. Clone Repository**
 ```bash
-git clone https://github.com/git-bonda108/mcp-sales-enablement.git
-cd mcp-sales-enablement
+git clone https://github.com/git-bonda108/ai-sales-enablement-full-scale.git
+cd ai-sales-enablement-full-scale
 ```
 
 ### **2. Install Dependencies**

@@ -36,7 +36,7 @@ The Streamlit app is showing "Using demo data" errors because:
 
 ### Step 1: Test the Fixes
 ```bash
-cd mcp-sales-enablement
+cd ai-sales-enablement-full-scale
 uv run python test_fixes.py
 ```
 
