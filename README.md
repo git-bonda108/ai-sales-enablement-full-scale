@@ -88,3 +88,7 @@ uv run python tests/working_crm_test.py    # spawns the server and exercises the
 ## Status
 
 Demonstration project. The UI, gateway, MCP servers, RAG store, and training pipeline are all implemented, but the quickstart path serves mock data by design, and the LLM layer degrades to canned responses without an API key. See [docs/EVALUATION.md](docs/EVALUATION.md) for an honest account of test coverage and known gaps.
+
+## Web dashboard (Next.js)
+
+`web-dashboard/` contains the companion Next.js 14 dashboard — pipeline analytics, CRM contact views, call-transcript review, and a streaming AI sales assistant (gpt-4.1-mini via an OpenAI-compatible endpoint). It was absorbed from the standalone dashboard repository at HEAD; see `web-dashboard/README.md` for its architecture and `web-dashboard/VERCEL_DEPLOYMENT.md` for deployment.

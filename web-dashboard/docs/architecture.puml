@@ -1,0 +1,228 @@
+@startuml
+skinparam backgroundColor #FAFAFA
+skinparam defaultFontName Arial
+skinparam defaultFontSize 10
+
+package "External Systems" as external {
+  [Voice Platforms\n(Zoom, Teams, Gong)] as voice_platforms
+  [CRM Systems\n(Salesforce, HubSpot)] as crm_systems
+  [Email Platforms\n(Gmail, Outlook)] as email_platforms
+  [PSTN/SIP Trunks] as pstn
+}
+
+package "Voice Gateway Layer" as voice_gateway {
+  [Voice Gateway Router] as vgw_router
+  [WebRTC Gateway] as webrtc
+  [SIP Gateway] as sip_gw
+  [Speech-to-Text Engine] as stt
+  [Text-to-Speech Engine] as tts
+  [Real-time Audio Processor] as audio_proc
+  [Call State Manager] as call_state
+  [Human Handoff Controller] as handoff
+}
+
+package "Integration Layer" as integration {
+  [API Gateway\n(Kong/Istio)] as api_gateway
+  [Event Bus\n(Apache Kafka)] as event_bus
+  [Webhook Handlers] as webhooks
+  [OAuth Service] as oauth
+  [Rate Limiter] as rate_limiter
+  [Circuit Breaker] as circuit_breaker
+}
+
+package "CRM Integration Services" as crm_integration {
+  [Salesforce Connector] as sf_connector
+  [HubSpot Connector] as hs_connector
+  [Real-time Sync Engine] as sync_engine
+  [Data Mapper] as data_mapper
+  [Conflict Resolution] as conflict_resolver
+  [Bidirectional Sync Monitor] as sync_monitor
+}
+
+package "Email Intelligence Services" as email_services {
+  [Gmail API Service] as gmail_service
+  [Google Workspace Connector] as gws_connector
+  [Email Thread Analyzer] as email_analyzer
+  [Draft Generation Engine] as draft_engine
+  [Email Context Processor] as email_context
+  [Gemini AI Integration] as gemini_ai
+}
+
+package "Data Processing Pipeline" as data_pipeline {
+  [Data Ingestion Service] as ingestion
+  [Stream Processor\n(Apache Flink)] as stream_proc
+  [Data Quality Engine] as data_quality
+  [Preprocessing Pipeline] as preprocessing
+  [Embedding Service] as embedding
+  [Vector Database\n(Pinecone/Weaviate)] as vector_db
+  [Metadata Store\n(PostgreSQL)] as metadata_db
+  [Data Lake\n(S3/MinIO)] as data_lake
+}
+
+package "AI/ML Processing Layer" as ai_ml {
+  [LLM Router & Load Balancer] as llm_router
+  [Llama 3.1 Cluster] as llama_cluster
+  [LoRA Adapter Registry] as lora_registry
+  [Inference Engine\n(vLLM/TensorRT-LLM)] as inference_engine
+  [RAG Engine] as rag_engine
+  [Context Manager] as context_manager
+  [Response Generator] as response_gen
+}
+
+package "Training & Learning Pipeline" as training {
+  [Training Orchestrator] as train_orchestrator
+  [Data Labeling Service] as labeling
+  [Model Training Engine] as model_training
+  [Evaluation Pipeline] as evaluation
+  [A/B Testing Framework] as ab_testing
+  [Model Registry\n(MLflow)] as model_registry
+  [Feedback Processor] as feedback_proc
+  [Continuous Learning Engine] as continuous_learning
+}
+
+package "Monitoring & Observability" as monitoring {
+  [Metrics Collector\n(Prometheus)] as metrics
+  [Distributed Tracing\n(Jaeger)] as tracing
+  [Log Aggregation\n(ELK Stack)] as logging
+  [Model Drift Detector] as drift_detector
+  [Performance Monitor] as perf_monitor
+  [Alert Manager] as alert_manager
+  [Grafana Dashboards] as dashboards
+  [Health Check Service] as health_check
+}
+
+package "Application Services" as app_services {
+  [Insight Generation Service] as insight_service
+  [Recommendation Engine] as recommendation
+  [Analytics Service] as analytics
+  [Conversation Intelligence] as conv_intelligence
+  [Lead Scoring Engine] as lead_scoring
+  [Next Best Action] as next_action
+}
+
+package "User Interfaces" as ui {
+  [Web Application\n(React/Next.js)] as web_app
+  [Mobile App\n(React Native)] as mobile_app
+  [REST/GraphQL APIs] as apis
+  [Admin Dashboard] as admin_dashboard
+  [Real-time Dashboard] as realtime_dashboard
+}
+
+package "Security & Compliance" as security {
+  [Identity Provider\n(Keycloak)] as idp
+  [Encryption Service] as encryption
+  [Audit Logger] as audit
+  [Compliance Monitor] as compliance
+  [Data Privacy Engine] as privacy
+}
+
+' External connections
+voice_platforms --> vgw_router
+crm_systems --> api_gateway
+email_platforms --> api_gateway
+pstn --> sip_gw
+
+' Voice Gateway connections
+vgw_router --> webrtc
+vgw_router --> sip_gw
+webrtc --> audio_proc
+sip_gw --> audio_proc
+audio_proc --> stt
+audio_proc --> tts
+stt --> call_state
+tts --> call_state
+call_state --> handoff
+handoff --> api_gateway
+
+' Integration layer
+api_gateway --> event_bus
+api_gateway --> oauth
+api_gateway --> rate_limiter
+api_gateway --> circuit_breaker
+event_bus --> webhooks
+
+' CRM Integration
+api_gateway --> sf_connector
+api_gateway --> hs_connector
+sf_connector --> sync_engine
+hs_connector --> sync_engine
+sync_engine --> data_mapper
+sync_engine --> conflict_resolver
+sync_engine --> sync_monitor
+
+' Email Services
+api_gateway --> gmail_service
+api_gateway --> gws_connector
+gmail_service --> email_analyzer
+gws_connector --> email_analyzer
+email_analyzer --> draft_engine
+email_analyzer --> email_context
+email_context --> gemini_ai
+
+' Data Pipeline
+event_bus --> ingestion
+ingestion --> stream_proc
+stream_proc --> data_quality
+data_quality --> preprocessing
+preprocessing --> embedding
+embedding --> vector_db
+preprocessing --> metadata_db
+ingestion --> data_lake
+
+' AI/ML Processing
+vector_db --> rag_engine
+metadata_db --> context_manager
+rag_engine --> llm_router
+context_manager --> llm_router
+llm_router --> llama_cluster
+llama_cluster --> lora_registry
+llama_cluster --> inference_engine
+inference_engine --> response_gen
+
+' Training Pipeline
+data_lake --> train_orchestrator
+train_orchestrator --> labeling
+labeling --> model_training
+model_training --> evaluation
+evaluation --> ab_testing
+ab_testing --> model_registry
+model_registry --> lora_registry
+feedback_proc --> continuous_learning
+continuous_learning --> model_training
+
+' Monitoring
+llama_cluster --> metrics
+inference_engine --> metrics
+vector_db --> metrics
+metrics --> dashboards
+tracing --> dashboards
+logging --> dashboards
+drift_detector --> alert_manager
+perf_monitor --> alert_manager
+alert_manager --> dashboards
+
+' Application Services
+response_gen --> insight_service
+insight_service --> recommendation
+recommendation --> analytics
+analytics --> conv_intelligence
+conv_intelligence --> lead_scoring
+lead_scoring --> next_action
+
+' User Interfaces
+insight_service --> web_app
+recommendation --> web_app
+analytics --> web_app
+web_app --> apis
+mobile_app --> apis
+apis --> admin_dashboard
+apis --> realtime_dashboard
+
+' Security
+idp --> api_gateway
+encryption --> data_lake
+audit --> logging
+compliance --> monitoring
+privacy --> data_quality
+
+@enduml
